@@ -1,27 +1,11 @@
 import tkinter as tk
 from tkinter import ttk
 import psutil
-from config.settings import MOOD_THRESHOLDS
+from config.settings import RESOURCES, SLIDER_DEFAULTS
 
 
 def _battery_available():
     return psutil.sensors_battery() is not None
-
-
-RESOURCES = [
-    ("cpu",     "CPU"),
-    ("ram",     "RAM"),
-    ("disk",    "디스크"),
-    ("network", "네트워크"),
-    ("battery", "배터리"),
-]
-
-SLIDERS = [
-    ("tired_cpu",  "CPU 피로 기준",   0, 100),
-    ("tired_ram",  "RAM 피로 기준",   0, 100),
-    ("panic_cpu",  "CPU 패닉 기준",   0, 100),
-    ("panic_ram",  "RAM 패닉 기준",   0, 100),
-]
 
 
 class SettingsWindow(tk.Toplevel):
@@ -44,44 +28,32 @@ class SettingsWindow(tk.Toplevel):
 
         tk.Button(self, text="적용", width=10, command=self._apply).pack(pady=(0, 12))
 
-    # ── 탭 1: 자원 On/Off ────────────────────────────────────────────
     def _tab_resources(self, parent):
         frame = tk.Frame(parent)
         has_battery = _battery_available()
 
-        for key, label in RESOURCES:
-            if key == "battery" and not has_battery:
-                continue  # 배터리 없는 PC면 항목 자체를 숨김
-
-            var = self.app.visibility[key]
-            tk.Checkbutton(frame, text=label, variable=var,
+        for key, label, _, _fmt in RESOURCES:
+            if key in ("battery", "charging") and not has_battery:
+                continue
+            tk.Checkbutton(frame, text=label, variable=self.app.visibility[key],
                            font=("Consolas", 11)).pack(anchor="w", padx=16, pady=3)
 
         return frame
 
-    # ── 탭 2: 슬라이더 ───────────────────────────────────────────────
     def _tab_sliders(self, parent):
         frame = tk.Frame(parent)
 
-        for key, label, lo, hi in SLIDERS:
-            var = tk.IntVar(value=self.app.thresholds[key])
-            self._slider_vars[key] = var
-
-            row = tk.Frame(frame)
-            row.pack(fill="x", padx=16, pady=4)
-
-            tk.Label(row, text=f"{label}:", font=("Consolas", 10), width=16,
-                     anchor="w").pack(side="left")
-            tk.Scale(row, from_=lo, to=hi, orient="horizontal",
-                     variable=var, length=160).pack(side="left")
-            tk.Label(row, textvariable=var, font=("Consolas", 10),
-                     width=4).pack(side="left")
+        labels = {key: label for key, label, _, _fmt in RESOURCES}
+        for key in SLIDER_DEFAULTS:
+            var = self.app.show_slider.get(key)
+            if var is None:
+                continue
+            lbl = labels.get(key, key)
+            tk.Checkbutton(frame, text=f"{lbl} 슬라이더 표시", variable=var,
+                           font=("Consolas", 11)).pack(anchor="w", padx=16, pady=3)
 
         return frame
 
-    # ── 적용 ─────────────────────────────────────────────────────────
     def _apply(self):
-        for key, var in self._slider_vars.items():
-            self.app.thresholds[key] = var.get()
         self.app.rebuild_ui()
         self.destroy()
