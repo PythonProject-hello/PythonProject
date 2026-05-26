@@ -1,12 +1,15 @@
 from config.settings import MOOD_THRESHOLDS
 
-def get_mood(stats):
+def get_mood(stats, thresholds=None):
+    if thresholds is None:
+        thresholds = MOOD_THRESHOLDS
+
     cpu = stats["cpu"]
     ram = stats["ram"]
 
-    if cpu >= MOOD_THRESHOLDS["panic_cpu"] or ram >= MOOD_THRESHOLDS["panic_ram"]:
+    if cpu >= thresholds["panic_cpu"] or ram >= thresholds["panic_ram"]:
         return "panicking"
-    elif cpu >= MOOD_THRESHOLDS["tired_cpu"] or ram >= MOOD_THRESHOLDS["tired_ram"]:
+    elif cpu >= thresholds["tired_cpu"] or ram >= thresholds["tired_ram"]:
         return "tired"
     else:
         return "normal"
