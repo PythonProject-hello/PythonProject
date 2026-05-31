@@ -1,21 +1,29 @@
 from config.settings import MOOD_THRESHOLDS
 
-def get_mood(stats, thresholds=None):
+# (stat_key, threshold_key, "ge"=높을때 / "le"=낮을때, (연결형, 종결형))
+_CHECKS = [
+    ("cpu",     "tired_cpu",   "ge", ("덥고",    "더워요")),
+    ("memory",  "tired_memory","ge", ("졸리고",   "졸려요")),
+    ("battery", "low_battery", "le", ("배고프고", "배고파요")),
+    ("disk",    "tired_disk",  "ge", ("배부르고", "배불러요")),
+]
+
+def get_dialogue(stats, thresholds=None):
     if thresholds is None:
         thresholds = MOOD_THRESHOLDS
 
-    cpu = stats["cpu"]
-    ram = stats["ram"]
+    complaints = []
+    for key, thresh_key, cmp, msgs in _CHECKS:
+        val   = stats.get(key)
+        thresh = thresholds.get(thresh_key)
+        if val is None or thresh is None:
+            continue
+        if (cmp == "ge" and val >= thresh) or (cmp == "le" and val <= thresh):
+            complaints.append(msgs)
 
-    if cpu >= thresholds["panic_cpu"] or ram >= thresholds["panic_ram"]:
-        return "panicking"
-    elif cpu >= thresholds["tired_cpu"] or ram >= thresholds["tired_ram"]:
-        return "tired"
-    else:
-        return "normal"
+    if not complaints:
+        return "편안해요"
 
-MOOD_LABEL = {
-    "normal":    "😊 여유로움",
-    "tired":     "😓 힘들어요",
-    "panicking": "😱 살려줘!!",
-}
+    parts = [connector for connector, _ in complaints[:-1]]
+    parts.append(complaints[-1][1])
+    return " ".join(parts)

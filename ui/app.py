@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from core.monitor import get_stats
-from core.character import get_mood, MOOD_LABEL
+from core.monitor import project_data as get_stats
+from core.character import get_dialogue
 from config.settings import REFRESH_INTERVAL, MOOD_THRESHOLDS, RESOURCES, SLIDER_DEFAULTS
 
 
@@ -58,7 +58,7 @@ class App(tk.Tk):
 
     def _update(self):
         stats = get_stats()
-        mood  = get_mood(stats, self.thresholds)
+        dialogue = get_dialogue(stats, self.thresholds)
 
         for key, label, _, fmt in RESOURCES:
             lbl = self._stat_labels.get(key)
@@ -77,5 +77,5 @@ class App(tk.Tk):
             if bar is not None and val is not None:
                 bar["value"] = val
 
-        self.lbl_mood.config(text=MOOD_LABEL[mood])
+        self.lbl_mood.config(text=dialogue)
         self.after(REFRESH_INTERVAL * 1000, self._update)

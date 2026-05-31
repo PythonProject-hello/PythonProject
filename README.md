@@ -25,13 +25,15 @@ Pyject/
     monitor.py       # 시스템 자원 수집
     character.py     # 수집값 → 캐릭터 상태 변환
   ui/                # UI 없음 — 자유롭게 구현
+    app.py # 임시 메인 화면
+    settings_window.py # 임시 설정창
 ```
 
 ---
 
 ## 컴퓨팅 자원 추가 방법
 
-`core/monitor.py`의 `get_stats()`에 항목을 추가하면 됩니다.  
+`core/monitor.py`의 `project_data()`에 항목을 추가하면 됩니다.  
 아래는 `psutil`로 가져올 수 있는 주요 자원 목록입니다.
 
 ### 디스크 사용률
@@ -72,11 +74,39 @@ len(psutil.pids())
 
 ## UI 구현 가이드
 
-`get_stats()`는 dict를 반환하므로 원하는 키를 추가한 뒤 UI에서 읽으면 됩니다.
+### project_data() 가져오기
+
+```python
+from core.monitor import project_data
+
+stats = project_data()
+print(stats["cpu"])      # CPU 사용률 (%)
+print(stats["memory"])   # RAM 사용률 (%)
+print(stats["battery"])  # 배터리 잔량 (%), 배터리 없으면 None
+print(stats["disk"])     # 디스크 사용률 (%)
+```
+
+반환 키 전체 목록:
+
+| 키 | 설명 | 단위 |
+|----|------|------|
+| `cpu` | CPU 사용률 | % |
+| `cpu_freq` | CPU 클럭 | GHz |
+| `memory` | RAM 사용률 | % |
+| `memory_used_gb` | RAM 사용량 | GB |
+| `memory_total_gb` | RAM 전체 용량 | GB |
+| `memory_available_gb` | RAM 여유 용량 | GB |
+| `battery` | 배터리 잔량 | % (없으면 None) |
+| `charging` | 충전 중 여부 | bool (없으면 None) |
+| `disk` | 디스크 사용률 | % |
+
+---
+
+`project_data()`는 dict를 반환하므로 원하는 키를 추가한 뒤 UI에서 읽으면 됩니다.
 
 ```python
 # core/monitor.py 예시
-def get_stats():
+def project_data():
     return {
         "cpu":  psutil.cpu_percent(interval=1),
         "ram":  psutil.virtual_memory().percent,
