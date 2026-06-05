@@ -1,81 +1,26 @@
-# PythonProject
-##### 팀원: 김민준 엄민용 최형지
+# 주인님, 지금 상태 어때요?
 
-주인님 확인해주세요
+컴퓨터의 CPU, 메모리, 저장 공간, 배터리 상태를 확인하고 현재 상태에 맞춰 하치와레 캐릭터가 반응하는 Python GUI 앱입니다.
 
-# 대충 설명
+## 실행
 
-CPU, RAM 사용률에 따라 캐릭터가 반응하는 시스템 모니터입니다...
+1. VS Code에서 이 폴더 열기
+2. `main.py` 열기
+3. 실행 버튼 또는 `F5`
 
----
+## 주요 기능
 
-## 실행 방법
+- CPU 사용률 확인
+- 메모리 사용량 확인
+- 저장 공간 확인
+- 배터리 상태 확인
+- 네트워크 IP 확인
+- 설정 창에서 표시 항목 선택
+- 컴퓨터 상태에 따라 캐릭터 무드 변경
 
-```bash
-pip install psutil
-python main.py
-```
+## 상태 기준
 
----
-
-## 프로젝트 구조
-
-```
-Pyject/
-  main.py
-  config/
-    settings.py      # 임계값, 갱신 주기 설정
-  core/
-    monitor.py       # 시스템 자원 수집
-    character.py     # 수집값 → 캐릭터 대사 변환
-  ui/
-    app.py           # 메인 화면(임시 UI)
-    settings_window.py # 설정창(임시 UI)
-```
-
----
-
-
-
-## project_data() 가져오기
-
-```python
-from core.monitor import project_data
-
-stats = project_data()
-print(stats["cpu"])      # CPU 사용률 (%)
-print(stats["memory"])   # RAM 사용률 (%)
-print(stats["battery"])  # 배터리 잔량 (%), 배터리 없으면 None
-print(stats["disk"])     # 디스크 사용률 (%)
-```
-
-반환 키 전체 목록:
-
-| 키 | 설명 | 단위 |
-|----|------|------|
-| `cpu` | CPU 사용률 | % |
-| `cpu_freq` | CPU 클럭 | GHz |
-| `memory` | RAM 사용률 | % |
-| `memory_used_gb` | RAM 사용량 | GB |
-| `memory_total_gb` | RAM 전체 용량 | GB |
-| `memory_available_gb` | RAM 여유 용량 | GB |
-| `battery` | 배터리 잔량 | % (없으면 None) |
-| `charging` | 충전 중 여부 | bool (없으면 None) |
-| `disk` | 디스크 사용률 | % |
-
----
-
-## 캐릭터 대사 추가
-
-`core/character.py`의 `_CHECKS`에 항목을 추가하면 됩니다.  
-임계값은 `config/settings.py`의 `MOOD_THRESHOLDS`에서 조정합니다.
-
-```python
-# (stat_key, threshold_key, "ge"=높을때 / "le"=낮을때, (연결형, 종결형))
-_CHECKS = [
-    ("cpu",     "tired_cpu",   "ge", ("덥고",    "더워요")),
-    ("memory",  "tired_memory","ge", ("졸리고",   "졸려요")),
-    ("battery", "low_battery", "le", ("배고프고", "배고파요")),
-    ("disk",    "tired_disk",  "ge", ("배부르고", "배불러요")),
-]
-```
+- 쾌적한 상태: 작업하기 좋은 상태
+- 심심한 상태: 자원 사용량이 낮은 상태
+- 절전 필요: 배터리가 낮은 상태
+- 과부하 모드: CPU 또는 RAM 사용량이 높은 상태

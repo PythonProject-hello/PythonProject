@@ -15,7 +15,8 @@ build/
 *.egg-info/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/launch.json
 .idea/
 
 # OS
