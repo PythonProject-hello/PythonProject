@@ -3,12 +3,14 @@ import time
 import tkinter as tk
 
 
-from core.monitor import project_data
+from core.monitor import project_data, get_top_processes
 from core.character import get_dialogue
 from config.settings import (
     DEFAULT_RESOURCES,
     MIN_REFRESH_INTERVAL,
     MAX_REFRESH_INTERVAL,
+    MIN_PROCESS_INTERVAL,
+    MAX_PROCESS_INTERVAL,
     DEFAULT_THRESHOLDS,
     load_settings,
 )
@@ -107,11 +109,17 @@ class StatusApp:
         self.battery_low      = tk.IntVar(value=_t("battery_low"))
         self.disk_hot         = tk.IntVar(value=_t("disk_hot"))
         self.refresh_interval = tk.IntVar(value=_t("refresh_interval"))
+        self.process_interval      = tk.IntVar(value=_t("process_interval"))
+        self.process_cpu_threshold = tk.IntVar(value=_t("process_cpu_threshold"))
+        self.process_mem_threshold = tk.IntVar(value=_t("process_mem_threshold"))
         self.auto_refresh     = tk.BooleanVar(value=_saved.get("auto_refresh", True))
+        self.process_auto     = tk.BooleanVar(value=_saved.get("process_auto", True))
         self.auto_job = None
+        self.process_job = None
         self.settings_win = None
 
         self.data   = {}
+        self.process_data = []
         self.images = {
             key: safe_load_image(self.root, os.path.join(ASSET_DIR, filename))
             for key, filename in MOOD_FILES.items()
@@ -123,6 +131,7 @@ class StatusApp:
         self.canvas.tag_bind("settings_btn", "<Button-1>", lambda _: self.open_settings())
         self.refresh()
         self.toggle_auto_refresh()
+        self.toggle_process_auto()
 
     def refresh(self):
         active = {key for key, var in self.show_vars.items() if var.get()}
@@ -157,12 +166,33 @@ class StatusApp:
             self.root.after_cancel(self.auto_job)
             self.auto_job = None
         if self.auto_refresh.get():
-            self.schedule_refresh()
+            self._schedule_next_refresh()
+
+    def _schedule_next_refresh(self):
+        interval_ms = max(MIN_REFRESH_INTERVAL, min(MAX_REFRESH_INTERVAL, self.refresh_interval.get())) * 1000
+        self.auto_job = self.root.after(interval_ms, self.schedule_refresh)
 
     def schedule_refresh(self):
         self.refresh()
-        interval_ms = max(MIN_REFRESH_INTERVAL, min(MAX_REFRESH_INTERVAL, self.refresh_interval.get())) * 1000
-        self.auto_job = self.root.after(interval_ms, self.schedule_refresh)
+        self._schedule_next_refresh()
+
+    def check_processes(self):
+        self.process_data = get_top_processes(
+            cpu_threshold=self.process_cpu_threshold.get(),
+            mem_threshold=self.process_mem_threshold.get(),
+        )
+
+    def schedule_process_check(self):
+        self.check_processes()
+        interval_ms = max(MIN_PROCESS_INTERVAL, min(MAX_PROCESS_INTERVAL, self.process_interval.get())) * 60 * 1000
+        self.process_job = self.root.after(interval_ms, self.schedule_process_check)
+
+    def toggle_process_auto(self):
+        if self.process_job:
+            self.root.after_cancel(self.process_job)
+            self.process_job = None
+        if self.process_auto.get():
+            self.schedule_process_check()
 
     def mood(self):
         import random

@@ -2,7 +2,11 @@ import tkinter as tk
 from tkinter import ttk
 
 from ui.app import BG, PANEL, TEXT, MUTED, BLUE, CARD
-from config.settings import MIN_REFRESH_INTERVAL, MAX_REFRESH_INTERVAL, PRESETS, save_settings
+from config.settings import (
+    MIN_REFRESH_INTERVAL, MAX_REFRESH_INTERVAL,
+    MIN_PROCESS_INTERVAL, MAX_PROCESS_INTERVAL,
+    PRESETS, save_settings,
+)
 
 
 class _SliderBar:
@@ -105,6 +109,10 @@ class SettingsWindow:
         tmp_bat      = tk.IntVar(value=app.battery_low.get())
         tmp_disk     = tk.IntVar(value=app.disk_hot.get())
         tmp_interval = tk.IntVar(value=app.refresh_interval.get())
+        tmp_proc_interval = tk.IntVar(value=app.process_interval.get())
+        tmp_proc_cpu      = tk.IntVar(value=app.process_cpu_threshold.get())
+        tmp_proc_mem      = tk.IntVar(value=app.process_mem_threshold.get())
+        tmp_proc_auto     = tk.BooleanVar(value=app.process_auto.get())
         tmp_auto     = tk.BooleanVar(value=app.auto_refresh.get())
 
         # --- 자원 표시 체크박스 ---
@@ -157,6 +165,16 @@ class SettingsWindow:
 
         ttk.Checkbutton(inner, text="자동 새로고침", variable=tmp_auto, style="Dark.TCheckbutton").pack(anchor="w", padx=30, pady=(14, 0))
 
+        # --- 프로세스 모니터링 설정 ---
+        tk.Label(inner, text="프로세스 모니터링", font=("Apple SD Gothic Neo", 16, "bold"), bg=BG, fg=TEXT).pack(anchor="w", padx=28, pady=(22, 4))
+        tk.Label(inner, text="자원을 많이 쓰는 프로그램을 감지하는 기준입니다.", font=("Apple SD Gothic Neo", 11, "bold"), bg=BG, fg=MUTED).pack(anchor="w", padx=28, pady=(0, 4))
+
+        self._make_slider(inner, "측정 주기", tmp_proc_interval, MIN_PROCESS_INTERVAL, MAX_PROCESS_INTERVAL, "분")
+        self._make_slider(inner, "CPU 사용 기준", tmp_proc_cpu, 5, 90, "%")
+        self._make_slider(inner, "메모리 사용 기준", tmp_proc_mem, 5, 90, "%")
+
+        ttk.Checkbutton(inner, text="자동 모니터링", variable=tmp_proc_auto, style="Dark.TCheckbutton").pack(anchor="w", padx=30, pady=(8, 0))
+
         # --- 저장 버튼 ---
         def save():
             for k, v in tmp_show.items():
@@ -167,6 +185,17 @@ class SettingsWindow:
             app.disk_hot.set(tmp_disk.get())
             interval_changed = tmp_interval.get() != app.refresh_interval.get()
             app.refresh_interval.set(tmp_interval.get())
+
+            proc_interval_changed = tmp_proc_interval.get() != app.process_interval.get()
+            app.process_interval.set(tmp_proc_interval.get())
+            app.process_cpu_threshold.set(tmp_proc_cpu.get())
+            app.process_mem_threshold.set(tmp_proc_mem.get())
+
+            prev_proc_auto = app.process_auto.get()
+            app.process_auto.set(tmp_proc_auto.get())
+            if tmp_proc_auto.get() != prev_proc_auto or (tmp_proc_auto.get() and proc_interval_changed):
+                app.toggle_process_auto()
+
             prev_auto = app.auto_refresh.get()
             app.auto_refresh.set(tmp_auto.get())
             if tmp_auto.get() != prev_auto or (tmp_auto.get() and interval_changed):
@@ -179,6 +208,10 @@ class SettingsWindow:
                 "battery_low":      app.battery_low.get(),
                 "disk_hot":         app.disk_hot.get(),
                 "refresh_interval": app.refresh_interval.get(),
+                "process_interval":      app.process_interval.get(),
+                "process_cpu_threshold": app.process_cpu_threshold.get(),
+                "process_mem_threshold": app.process_mem_threshold.get(),
+                "process_auto":          app.process_auto.get(),
                 "auto_refresh":     app.auto_refresh.get(),
             })
 

@@ -14,13 +14,21 @@ DEFAULT_REFRESH_INTERVAL = 5
 MIN_REFRESH_INTERVAL = 1
 MAX_REFRESH_INTERVAL = 10
 
+# 프로세스 측정 주기 기본값 (분). 슬라이더 범위: 1~10
+DEFAULT_PROCESS_INTERVAL = 5
+MIN_PROCESS_INTERVAL = 1
+MAX_PROCESS_INTERVAL = 10
+
 # 반응 기준값 기본값
 DEFAULT_THRESHOLDS = {
-    "cpu_hot":          75,
-    "ram_hot":          82,
-    "battery_low":      25,
-    "disk_hot":         40,
-    "refresh_interval": DEFAULT_REFRESH_INTERVAL,
+    "cpu_hot":              75,
+    "ram_hot":              82,
+    "battery_low":          25,
+    "disk_hot":             40,
+    "refresh_interval":     DEFAULT_REFRESH_INTERVAL,
+    "process_interval":     DEFAULT_PROCESS_INTERVAL,
+    "process_cpu_threshold": 10,
+    "process_mem_threshold": 10,
 }
 
 # 프리셋
