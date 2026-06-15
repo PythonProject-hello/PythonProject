@@ -41,7 +41,8 @@ ALERTS = [
     ("battery", "battery", "battery_low", "le", "배터리",      "배터리가 {value:.0f}%로 기준({thresh}%) 이하예요."),
 ]
 
-BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# PyInstaller onefile 실행 시 임시 압축 해제 경로(sys._MEIPASS)를 우선 사용
+BASE_DIR  = getattr(sys, "_MEIPASS", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ASSET_DIR = os.path.join(BASE_DIR, "assets")
 
 APP_W = 1240
