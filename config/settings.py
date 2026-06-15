@@ -34,6 +34,9 @@ DEFAULT_THRESHOLDS = {
 # 창 보이기/숨기기 단축키 (Ctrl+Alt+<키>). <키>만 변경 가능
 DEFAULT_HOTKEY_KEY = "m"
 
+# 프로그램 종료 단축키 (Ctrl+Alt+<키>). <키>만 변경 가능
+DEFAULT_QUIT_HOTKEY_KEY = "q"
+
 # 임계값 초과 시 토스트 알림 기본 사용 여부
 DEFAULT_ALERT_ENABLED = True
 

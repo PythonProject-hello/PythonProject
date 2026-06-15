@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-from ui.app import BG, PANEL, TEXT, MUTED, BLUE, CARD
+from ui.app import BG, PANEL, TEXT, MUTED, BLUE, CARD, RED
 from config.settings import (
     MIN_REFRESH_INTERVAL, MAX_REFRESH_INTERVAL,
     MIN_PROCESS_INTERVAL, MAX_PROCESS_INTERVAL,
@@ -102,6 +102,36 @@ class SettingsWindow:
             scroll_canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
         win.bind("<MouseWheel>", _on_mousewheel)
 
+        # 터치스크린 드래그 스크롤 (toplevel에 바인딩 - bindtags로 모든 자식 위젯의 터치 이벤트도 전달됨)
+        def _on_touch_press(e):
+            w = e.widget
+            # 빈 공간(스크롤 캔버스/프레임/레이블)에서 시작한 터치만 스크롤로 처리.
+            # 슬라이더, 체크박스, 입력란, 버튼 등 다른 동작 중에는 스크롤 비활성화.
+            if w is scroll_canvas or isinstance(w, (tk.Label, tk.Frame)):
+                scroll_canvas._touch_y = e.y_root
+            else:
+                scroll_canvas._touch_y = None
+
+        def _on_touch_drag(e):
+            last_y = getattr(scroll_canvas, "_touch_y", None)
+            if last_y is None:
+                return
+            dy = e.y_root - last_y
+            bbox = scroll_canvas.bbox("all")
+            if bbox:
+                content_h = bbox[3] - bbox[1]
+                if content_h > 0:
+                    top = scroll_canvas.yview()[0]
+                    scroll_canvas.yview_moveto(top - dy / content_h)
+            scroll_canvas._touch_y = e.y_root
+
+        def _on_touch_release(_e):
+            scroll_canvas._touch_y = None
+
+        win.bind("<ButtonPress-1>",   _on_touch_press,   add="+")
+        win.bind("<B1-Motion>",       _on_touch_drag,    add="+")
+        win.bind("<ButtonRelease-1>", _on_touch_release, add="+")
+
         # 임시 변수 (저장 전까지 app에 반영 안 됨)
         tmp_show     = {k: tk.BooleanVar(value=v.get()) for k, v in app.show_vars.items()}
         tmp_cpu      = tk.IntVar(value=app.cpu_hot.get())
@@ -115,6 +145,7 @@ class SettingsWindow:
         tmp_proc_auto     = tk.BooleanVar(value=app.process_auto.get())
         tmp_auto     = tk.BooleanVar(value=app.auto_refresh.get())
         tmp_hotkey   = tk.StringVar(value=app.hotkey_key.get())
+        tmp_quit_hotkey = tk.StringVar(value=app.quit_hotkey_key.get())
         tmp_alert    = tk.BooleanVar(value=app.alert_enabled.get())
 
         # --- 자원 표시 체크박스 ---
@@ -158,10 +189,10 @@ class SettingsWindow:
             ).pack(side="left", padx=(0, 8))
 
         # --- 임계값 슬라이더 ---
-        set_cpu  = self._make_slider(inner, "CPU 힘듦 기준",     tmp_cpu,  40, 95, "%")
-        set_ram  = self._make_slider(inner, "RAM 과부하 기준",    tmp_ram,  50, 95, "%")
+        set_cpu  = self._make_slider(inner, "CPU 더움 기준",     tmp_cpu,  5, 95, "%")
+        set_ram  = self._make_slider(inner, "RAM 졸림 기준",    tmp_ram,  20, 95, "%")
         set_bat  = self._make_slider(inner, "배터리 배고픔 기준", tmp_bat,   5, 60, "%")
-        set_disk = self._make_slider(inner, "디스크 배부름 기준", tmp_disk, 20, 95, "%")
+        set_disk = self._make_slider(inner, "디스크 머리아픔 기준", tmp_disk, 20, 95, "%")
 
         self._make_slider(inner, "갱신 주기", tmp_interval, MIN_REFRESH_INTERVAL, MAX_REFRESH_INTERVAL, "초")
 
@@ -179,11 +210,11 @@ class SettingsWindow:
 
         # --- 단축키 설정 ---
         tk.Label(inner, text="단축키", font=("Apple SD Gothic Neo", 16, "bold"), bg=BG, fg=TEXT).pack(anchor="w", padx=28, pady=(22, 4))
-        tk.Label(inner, text="창을 숨기거나 다시 보여주는 단축키입니다.", font=("Apple SD Gothic Neo", 11, "bold"), bg=BG, fg=MUTED).pack(anchor="w", padx=28, pady=(0, 6))
+        tk.Label(inner, text="백그라운드 단축키를 설정합니다.", font=("Apple SD Gothic Neo", 11, "bold"), bg=BG, fg=MUTED).pack(anchor="w", padx=28, pady=(0, 6))
 
         hotkey_frame = tk.Frame(inner, bg=BG)
         hotkey_frame.pack(anchor="w", padx=28)
-        tk.Label(hotkey_frame, text="Ctrl + Alt +", bg=BG, fg=TEXT, font=("Apple SD Gothic Neo", 13, "bold")).pack(side="left")
+        tk.Label(hotkey_frame, text="창 숨기기/보이기: Ctrl + Alt +", bg=BG, fg=TEXT, font=("Apple SD Gothic Neo", 13, "bold")).pack(side="left")
 
         def _validate_hotkey(value):
             return len(value) <= 1 and (value == "" or value.isalnum())
@@ -195,6 +226,32 @@ class SettingsWindow:
             insertbackground=TEXT, relief="flat", validate="key", validatecommand=vcmd,
         )
         hotkey_entry.pack(side="left", padx=(8, 0))
+
+        # --- 종료 단축키 ---
+        quit_hotkey_frame = tk.Frame(inner, bg=BG)
+        quit_hotkey_frame.pack(anchor="w", padx=28, pady=(8, 0))
+        tk.Label(quit_hotkey_frame, text="종료 단축키: Ctrl + Alt +", bg=BG, fg=TEXT, font=("Apple SD Gothic Neo", 13, "bold")).pack(side="left")
+
+        quit_hotkey_entry = tk.Entry(
+            quit_hotkey_frame, textvariable=tmp_quit_hotkey, width=3, justify="center",
+            font=("Apple SD Gothic Neo", 13, "bold"), bg=CARD, fg=TEXT,
+            insertbackground=TEXT, relief="flat", validate="key", validatecommand=vcmd,
+        )
+        quit_hotkey_entry.pack(side="left", padx=(8, 0))
+
+        conflict_label = tk.Label(inner, text="", bg=BG, fg=RED, font=("Apple SD Gothic Neo", 11, "bold"))
+        conflict_label.pack(anchor="w", padx=28, pady=(4, 0))
+
+        def _check_hotkey_conflict(*_):
+            a = tmp_hotkey.get().strip().lower()
+            b = tmp_quit_hotkey.get().strip().lower()
+            if a and b and a == b:
+                conflict_label.config(text="⚠ 창 토글 단축키와 종료 단축키가 같아요.⚠")
+            else:
+                conflict_label.config(text="")
+
+        tmp_hotkey.trace_add("write", _check_hotkey_conflict)
+        tmp_quit_hotkey.trace_add("write", _check_hotkey_conflict)
 
         # --- 알림 설정 ---
         tk.Label(inner, text="알림", font=("Apple SD Gothic Neo", 16, "bold"), bg=BG, fg=TEXT).pack(anchor="w", padx=28, pady=(22, 4))
@@ -227,11 +284,23 @@ class SettingsWindow:
             if tmp_auto.get() != prev_auto or (tmp_auto.get() and interval_changed):
                 app.toggle_auto_refresh()
 
-            new_hotkey = tmp_hotkey.get().strip() or app.hotkey_key.get()
+            new_hotkey      = tmp_hotkey.get().strip() or app.hotkey_key.get()
+            new_quit_hotkey = tmp_quit_hotkey.get().strip() or app.quit_hotkey_key.get()
+            if new_hotkey.lower() == new_quit_hotkey.lower():
+                # 두 단축키가 같아지면 둘 다 변경하지 않고 기존 값 유지
+                new_hotkey      = app.hotkey_key.get()
+                new_quit_hotkey = app.quit_hotkey_key.get()
+
             hotkey_changed = new_hotkey != app.hotkey_key.get()
             app.hotkey_key.set(new_hotkey)
+
+            quit_hotkey_changed = new_quit_hotkey != app.quit_hotkey_key.get()
+            app.quit_hotkey_key.set(new_quit_hotkey)
+
             if hotkey_changed:
                 app.register_hotkey()
+            if quit_hotkey_changed:
+                app.register_quit_hotkey()
 
             app.alert_enabled.set(tmp_alert.get())
 
@@ -248,6 +317,7 @@ class SettingsWindow:
                 "process_auto":          app.process_auto.get(),
                 "auto_refresh":     app.auto_refresh.get(),
                 "hotkey_key":       app.hotkey_key.get(),
+                "quit_hotkey_key":  app.quit_hotkey_key.get(),
                 "alert_enabled":    app.alert_enabled.get(),
             })
 
