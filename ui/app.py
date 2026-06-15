@@ -1,7 +1,7 @@
 import os
 import time
 import tkinter as tk
-
+import keyboard
 
 from core.monitor import project_data, get_top_processes
 from core.character import get_dialogue
@@ -12,6 +12,7 @@ from config.settings import (
     MIN_PROCESS_INTERVAL,
     MAX_PROCESS_INTERVAL,
     DEFAULT_THRESHOLDS,
+    DEFAULT_HOTKEY_KEY,
     load_settings,
 )
 
@@ -114,9 +115,11 @@ class StatusApp:
         self.process_mem_threshold = tk.IntVar(value=_t("process_mem_threshold"))
         self.auto_refresh     = tk.BooleanVar(value=_saved.get("auto_refresh", True))
         self.process_auto     = tk.BooleanVar(value=_saved.get("process_auto", True))
+        self.hotkey_key       = tk.StringVar(value=_saved.get("hotkey_key", DEFAULT_HOTKEY_KEY))
         self.auto_job = None
         self.process_job = None
         self.settings_win = None
+        self.hotkey_handle = None
 
         self.data   = {}
         self.process_data = []
@@ -132,6 +135,7 @@ class StatusApp:
         self.refresh()
         self.toggle_auto_refresh()
         self.toggle_process_auto()
+        self.register_hotkey()
 
     def refresh(self):
         active = {key for key, var in self.show_vars.items() if var.get()}
@@ -193,6 +197,33 @@ class StatusApp:
             self.process_job = None
         if self.process_auto.get():
             self.schedule_process_check()
+
+    def register_hotkey(self):
+        if self.hotkey_handle is not None:
+            keyboard.remove_hotkey(self.hotkey_handle)
+            self.hotkey_handle = None
+
+        combo = f"ctrl+alt+{self.hotkey_key.get().lower()}"
+        try:
+            self.hotkey_handle = keyboard.add_hotkey(
+                combo, lambda: self.root.after(0, self.toggle_window)
+            )
+        except Exception:
+            self.hotkey_handle = None
+
+    def toggle_window(self):
+        has_settings = self.settings_win is not None and self.settings_win.winfo_exists()
+        if self.root.state() == "withdrawn":
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+            if has_settings:
+                self.settings_win.deiconify()
+                self.settings_win.lift()
+        else:
+            if has_settings:
+                self.settings_win.withdraw()
+            self.root.withdraw()
 
     def mood(self):
         import random

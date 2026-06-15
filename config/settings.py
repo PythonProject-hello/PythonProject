@@ -31,6 +31,9 @@ DEFAULT_THRESHOLDS = {
     "process_mem_threshold": 10,
 }
 
+# 창 보이기/숨기기 단축키 (Ctrl+Alt+<키>). <키>만 변경 가능
+DEFAULT_HOTKEY_KEY = "m"
+
 # 프리셋
 PRESETS = {
     "느슨": {"cpu_hot": 90, "ram_hot": 90, "battery_low": 15, "disk_hot": 80},

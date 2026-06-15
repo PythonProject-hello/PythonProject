@@ -114,6 +114,7 @@ class SettingsWindow:
         tmp_proc_mem      = tk.IntVar(value=app.process_mem_threshold.get())
         tmp_proc_auto     = tk.BooleanVar(value=app.process_auto.get())
         tmp_auto     = tk.BooleanVar(value=app.auto_refresh.get())
+        tmp_hotkey   = tk.StringVar(value=app.hotkey_key.get())
 
         # --- 자원 표시 체크박스 ---
         tk.Label(inner, text="컴퓨팅 자원 설정", font=("Apple SD Gothic Neo", 22, "bold"), bg=BG, fg=TEXT).pack(anchor="w", padx=28, pady=(26, 6))
@@ -175,6 +176,25 @@ class SettingsWindow:
 
         ttk.Checkbutton(inner, text="자동 모니터링", variable=tmp_proc_auto, style="Dark.TCheckbutton").pack(anchor="w", padx=30, pady=(8, 0))
 
+        # --- 단축키 설정 ---
+        tk.Label(inner, text="단축키", font=("Apple SD Gothic Neo", 16, "bold"), bg=BG, fg=TEXT).pack(anchor="w", padx=28, pady=(22, 4))
+        tk.Label(inner, text="창을 숨기거나 다시 보여주는 단축키입니다.", font=("Apple SD Gothic Neo", 11, "bold"), bg=BG, fg=MUTED).pack(anchor="w", padx=28, pady=(0, 6))
+
+        hotkey_frame = tk.Frame(inner, bg=BG)
+        hotkey_frame.pack(anchor="w", padx=28)
+        tk.Label(hotkey_frame, text="Ctrl + Alt +", bg=BG, fg=TEXT, font=("Apple SD Gothic Neo", 13, "bold")).pack(side="left")
+
+        def _validate_hotkey(value):
+            return len(value) <= 1 and (value == "" or value.isalnum())
+
+        vcmd = (inner.register(_validate_hotkey), "%P")
+        hotkey_entry = tk.Entry(
+            hotkey_frame, textvariable=tmp_hotkey, width=3, justify="center",
+            font=("Apple SD Gothic Neo", 13, "bold"), bg=CARD, fg=TEXT,
+            insertbackground=TEXT, relief="flat", validate="key", validatecommand=vcmd,
+        )
+        hotkey_entry.pack(side="left", padx=(8, 0))
+
         # --- 저장 버튼 ---
         def save():
             for k, v in tmp_show.items():
@@ -201,6 +221,12 @@ class SettingsWindow:
             if tmp_auto.get() != prev_auto or (tmp_auto.get() and interval_changed):
                 app.toggle_auto_refresh()
 
+            new_hotkey = tmp_hotkey.get().strip() or app.hotkey_key.get()
+            hotkey_changed = new_hotkey != app.hotkey_key.get()
+            app.hotkey_key.set(new_hotkey)
+            if hotkey_changed:
+                app.register_hotkey()
+
             save_settings({
                 **{k: v.get() for k, v in app.show_vars.items()},
                 "cpu_hot":          app.cpu_hot.get(),
@@ -213,6 +239,7 @@ class SettingsWindow:
                 "process_mem_threshold": app.process_mem_threshold.get(),
                 "process_auto":          app.process_auto.get(),
                 "auto_refresh":     app.auto_refresh.get(),
+                "hotkey_key":       app.hotkey_key.get(),
             })
 
             app.settings_win = None
