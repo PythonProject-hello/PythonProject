@@ -158,10 +158,10 @@ class SettingsWindow:
             ).pack(side="left", padx=(0, 8))
 
         # --- 임계값 슬라이더 ---
-        set_cpu  = self._make_slider(inner, "CPU 힘듦 기준",     tmp_cpu,  40, 95, "%")
-        set_ram  = self._make_slider(inner, "RAM 과부하 기준",    tmp_ram,  50, 95, "%")
+        set_cpu  = self._make_slider(inner, "CPU 더움 기준",     tmp_cpu,  5, 95, "%")
+        set_ram  = self._make_slider(inner, "RAM 졸림 기준",    tmp_ram,  20, 95, "%")
         set_bat  = self._make_slider(inner, "배터리 배고픔 기준", tmp_bat,   5, 60, "%")
-        set_disk = self._make_slider(inner, "디스크 배부름 기준", tmp_disk, 20, 95, "%")
+        set_disk = self._make_slider(inner, "디스크 머리아픔 기준", tmp_disk, 20, 95, "%")
 
         self._make_slider(inner, "갱신 주기", tmp_interval, MIN_REFRESH_INTERVAL, MAX_REFRESH_INTERVAL, "초")
 

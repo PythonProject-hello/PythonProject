@@ -160,6 +160,8 @@ class StatusApp:
         self.canvas.pack()
         self.canvas.tag_bind("refresh_btn",  "<Button-1>", lambda _: self.refresh())
         self.canvas.tag_bind("settings_btn", "<Button-1>", lambda _: self.open_settings())
+        self.canvas.tag_bind("quit_btn",     "<Button-1>", lambda _: self.quit_app())
+        self.root.protocol("WM_DELETE_WINDOW", self.toggle_window)
         self.refresh()
         self.toggle_auto_refresh()
         self.toggle_process_auto()
@@ -332,6 +334,14 @@ class StatusApp:
                 self.settings_win.withdraw()
             self.root.withdraw()
 
+    def quit_app(self):
+        if keyboard is not None and self.hotkey_handle is not None:
+            try:
+                keyboard.remove_hotkey(self.hotkey_handle)
+            except Exception:
+                pass
+        self.root.destroy()
+
     def mood(self):
         import random
         # 모니터링하지 않는 자원은 기분 판정에서 제외 (CPU/RAM 0%, 배터리 100% 취급)
@@ -366,8 +376,9 @@ class StatusApp:
         self.canvas.delete("all")
         self.draw_background()
         self.draw_header()
-        self.draw_icon_button(1080, 54, "↻", "refresh_btn",  TEXT)
-        self.draw_icon_button(1150, 54, "⚙", "settings_btn", TEXT)
+        self.draw_icon_button(1010, 54, "↻", "refresh_btn",  TEXT)
+        self.draw_icon_button(1080, 54, "⚙", "settings_btn", TEXT)
+        self.draw_quit_button(1148, 54, 64, 58, "종료", "quit_btn")
         self.draw_status_panel()
         self.draw_character_panel()
 
@@ -382,6 +393,10 @@ class StatusApp:
 
     def draw_icon_button(self, x, y, icon, tag, fg):
         self.canvas.create_text(x + 29, y + 29, text=icon, fill=fg, font=("Apple SD Gothic Neo", 30, "bold"), tags=tag)
+
+    def draw_quit_button(self, x, y, w, h, text, tag):
+        rounded_rect(self.canvas, x, y, x + w, y + h, 16, fill=RED, outline="", tags=tag)
+        self.canvas.create_text(x + w / 2, y + h / 2, text=text, fill="#101214", font=("Apple SD Gothic Neo", 15, "bold"), tags=tag)
 
     def draw_header(self):
         self.canvas.create_text(76, 58, text="주인님, 확인해주세요!", anchor="nw", fill=TEXT, font=("Apple SD Gothic Neo", 28, "bold"))
