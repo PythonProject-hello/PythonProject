@@ -25,6 +25,7 @@ from config.settings import (
     MAX_PROCESS_INTERVAL,
     DEFAULT_THRESHOLDS,
     DEFAULT_HOTKEY_KEY,
+    DEFAULT_QUIT_HOTKEY_KEY,
     DEFAULT_ALERT_ENABLED,
     load_settings,
 )
@@ -140,11 +141,13 @@ class StatusApp:
         self.auto_refresh     = tk.BooleanVar(value=_saved.get("auto_refresh", True))
         self.process_auto     = tk.BooleanVar(value=_saved.get("process_auto", True))
         self.hotkey_key       = tk.StringVar(value=_saved.get("hotkey_key", DEFAULT_HOTKEY_KEY))
+        self.quit_hotkey_key  = tk.StringVar(value=_saved.get("quit_hotkey_key", DEFAULT_QUIT_HOTKEY_KEY))
         self.alert_enabled    = tk.BooleanVar(value=_saved.get("alert_enabled", DEFAULT_ALERT_ENABLED))
         self.auto_job = None
         self.process_job = None
         self.settings_win = None
         self.hotkey_handle = None
+        self.quit_hotkey_handle = None
         self._alert_active = set()
         self._alert_pending = {}
         self.alert_job = None
@@ -166,6 +169,7 @@ class StatusApp:
         self.toggle_auto_refresh()
         self.toggle_process_auto()
         self.register_hotkey()
+        self.register_quit_hotkey()
 
     def refresh(self):
         active = {key for key, var in self.show_vars.items() if var.get()}
@@ -312,12 +316,34 @@ class StatusApp:
             self.hotkey_handle = None
 
         combo = f"ctrl+alt+{self.hotkey_key.get().lower()}"
+        if combo == f"ctrl+alt+{self.quit_hotkey_key.get().lower()}":
+            return
+
         try:
             self.hotkey_handle = keyboard.add_hotkey(
                 combo, lambda: self.root.after(0, self.toggle_window)
             )
         except Exception:
             self.hotkey_handle = None
+
+    def register_quit_hotkey(self):
+        if keyboard is None:
+            return
+
+        if self.quit_hotkey_handle is not None:
+            keyboard.remove_hotkey(self.quit_hotkey_handle)
+            self.quit_hotkey_handle = None
+
+        combo = f"ctrl+alt+{self.quit_hotkey_key.get().lower()}"
+        if combo == f"ctrl+alt+{self.hotkey_key.get().lower()}":
+            return
+
+        try:
+            self.quit_hotkey_handle = keyboard.add_hotkey(
+                combo, lambda: self.root.after(0, self.quit_app)
+            )
+        except Exception:
+            self.quit_hotkey_handle = None
 
     def toggle_window(self):
         has_settings = self.settings_win is not None and self.settings_win.winfo_exists()
@@ -335,20 +361,33 @@ class StatusApp:
             self.root.withdraw()
 
     def quit_app(self):
-        if keyboard is not None and self.hotkey_handle is not None:
-            try:
-                keyboard.remove_hotkey(self.hotkey_handle)
-            except Exception:
-                pass
+        if keyboard is not None:
+            for handle in (self.hotkey_handle, self.quit_hotkey_handle):
+                if handle is not None:
+                    try:
+                        keyboard.remove_hotkey(handle)
+                    except Exception:
+                        pass
         self.root.destroy()
 
     def mood(self):
-        import random
-        # 모니터링하지 않는 자원은 기분 판정에서 제외 (CPU/RAM 0%, 배터리 100% 취급)
+        # 모니터링하지 않는 자원은 기분 판정에서 제외 (CPU/RAM/디스크 0%, 배터리 100% 취급)
         cpu     = self.data.get("cpu", 0)
         ram     = self.data.get("ram", (0, ""))[0]
+        disk    = self.data.get("disk", (0, ""))[0]
         battery = self.data.get("battery", (100, ""))[0]
         raw     = self.data.get("_raw", {})
+
+        # 모니터링하지 않는 자원은 멘트 판정에서도 제외
+        raw_for_dialogue = dict(raw)
+        if not self.show_vars["cpu"].get():
+            raw_for_dialogue.pop("cpu", None)
+        if not self.show_vars["ram"].get():
+            raw_for_dialogue.pop("memory", None)
+        if not self.show_vars["disk"].get():
+            raw_for_dialogue.pop("disk", None)
+        if not self.show_vars["battery"].get():
+            raw_for_dialogue.pop("battery", None)
 
         thresholds = {
             "tired_cpu":    self.cpu_hot.get(),
@@ -356,21 +395,28 @@ class StatusApp:
             "low_battery":  self.battery_low.get(),
             "tired_disk":   self.disk_hot.get(),
         }
-        dialogue = get_dialogue(raw, thresholds)
+        dialogue = get_dialogue(raw_for_dialogue, thresholds)
 
-        if cpu >= self.cpu_hot.get() or ram >= self.ram_hot.get():
-            return "hard_work", "과부하 모드", dialogue, RED, "HOT"
+        # 터진(기준 초과) 항목 수만큼 한 단계씩 컨디션이 악화됨
+        breaches = 0
+        if cpu  >= self.cpu_hot.get():
+            breaches += 1
+        if ram  >= self.ram_hot.get():
+            breaches += 1
+        if disk >= self.disk_hot.get():
+            breaches += 1
         if battery <= self.battery_low.get():
-            return "hungry", "배터리 부족", dialogue, YELLOW, "LOW"
-        if battery >= 98:
-            return "full", "배터리 만땅", dialogue, GREEN, "FULL"
-        if battery >= 80 and cpu <= 30 and ram <= 70:
-            return "good", "좋은 컨디션", dialogue, GREEN, "GOOD"
-        if cpu <= 12 and ram <= 60:
-            mood_key = random.choice(["sad", "calm"])
-            messages = {"sad": "너무 조용함", "calm": "조용한 상태"}
-            return mood_key, messages[mood_key], dialogue, BLUE, "IDLE"
-        return "peaceful", "쾌적한 상태", dialogue, GREEN, "OK"
+            breaches += 1
+
+        stages = [
+            ("peaceful",  "쾌적한 상태", GREEN,  "OK"),
+            ("calm",      "버틸만해요",  GREEN,  "OK"),
+            ("sad",       "지쳤어요",   YELLOW, "TIRED"),
+            ("hungry",    "힘들어요",   RED,    "BAD"),
+            ("hard_work", "살려줘요",   RED,    "HOT"),
+        ]
+        key, title, color, badge = stages[breaches]
+        return key, title, dialogue, color, badge
 
     def draw(self):
         self.canvas.delete("all")
