@@ -115,6 +115,7 @@ class SettingsWindow:
         tmp_proc_auto     = tk.BooleanVar(value=app.process_auto.get())
         tmp_auto     = tk.BooleanVar(value=app.auto_refresh.get())
         tmp_hotkey   = tk.StringVar(value=app.hotkey_key.get())
+        tmp_alert    = tk.BooleanVar(value=app.alert_enabled.get())
 
         # --- 자원 표시 체크박스 ---
         tk.Label(inner, text="컴퓨팅 자원 설정", font=("Apple SD Gothic Neo", 22, "bold"), bg=BG, fg=TEXT).pack(anchor="w", padx=28, pady=(26, 6))
@@ -195,6 +196,11 @@ class SettingsWindow:
         )
         hotkey_entry.pack(side="left", padx=(8, 0))
 
+        # --- 알림 설정 ---
+        tk.Label(inner, text="알림", font=("Apple SD Gothic Neo", 16, "bold"), bg=BG, fg=TEXT).pack(anchor="w", padx=28, pady=(22, 4))
+        tk.Label(inner, text="기준값을 넘으면 윈도우 알림(토스트)으로 알려줍니다.", font=("Apple SD Gothic Neo", 11, "bold"), bg=BG, fg=MUTED).pack(anchor="w", padx=28, pady=(0, 6))
+        ttk.Checkbutton(inner, text="임계값 알림 사용", variable=tmp_alert, style="Dark.TCheckbutton").pack(anchor="w", padx=30)
+
         # --- 저장 버튼 ---
         def save():
             for k, v in tmp_show.items():
@@ -227,6 +233,8 @@ class SettingsWindow:
             if hotkey_changed:
                 app.register_hotkey()
 
+            app.alert_enabled.set(tmp_alert.get())
+
             save_settings({
                 **{k: v.get() for k, v in app.show_vars.items()},
                 "cpu_hot":          app.cpu_hot.get(),
@@ -240,6 +248,7 @@ class SettingsWindow:
                 "process_auto":          app.process_auto.get(),
                 "auto_refresh":     app.auto_refresh.get(),
                 "hotkey_key":       app.hotkey_key.get(),
+                "alert_enabled":    app.alert_enabled.get(),
             })
 
             app.settings_win = None

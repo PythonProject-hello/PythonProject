@@ -2,6 +2,7 @@ import os
 import time
 import tkinter as tk
 import keyboard
+from winotify import Notification
 
 from core.monitor import project_data, get_top_processes
 from core.character import get_dialogue
@@ -13,8 +14,19 @@ from config.settings import (
     MAX_PROCESS_INTERVAL,
     DEFAULT_THRESHOLDS,
     DEFAULT_HOTKEY_KEY,
+    DEFAULT_ALERT_ENABLED,
     load_settings,
 )
+
+ALERT_HOLD_SECONDS = 5
+ALERT_POLL_SECONDS = 1
+
+ALERTS = [
+    ("cpu",     "cpu_hot",     "ge", "CPU 사용률",   "CPU 사용률이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
+    ("memory",  "ram_hot",     "ge", "메모리 사용량", "메모리 사용량이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
+    ("disk",    "disk_hot",    "ge", "저장 공간",    "디스크 사용량이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
+    ("battery", "battery_low", "le", "배터리",      "배터리가 {value:.0f}%로 기준({thresh}%) 이하예요."),
+]
 
 BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSET_DIR = os.path.join(BASE_DIR, "assets")
@@ -116,10 +128,14 @@ class StatusApp:
         self.auto_refresh     = tk.BooleanVar(value=_saved.get("auto_refresh", True))
         self.process_auto     = tk.BooleanVar(value=_saved.get("process_auto", True))
         self.hotkey_key       = tk.StringVar(value=_saved.get("hotkey_key", DEFAULT_HOTKEY_KEY))
+        self.alert_enabled    = tk.BooleanVar(value=_saved.get("alert_enabled", DEFAULT_ALERT_ENABLED))
         self.auto_job = None
         self.process_job = None
         self.settings_win = None
         self.hotkey_handle = None
+        self._alert_active = set()
+        self._alert_pending = {}
+        self.alert_job = None
 
         self.data   = {}
         self.process_data = []
@@ -154,7 +170,76 @@ class StatusApp:
             bat_label = "전원 연결" if raw["charging"] else "배터리"
             self.data["battery"] = (bat_pct, bat_label)
 
+        self.check_alerts(raw, active)
         self.draw()
+
+    def check_alerts(self, raw, active):
+        if not self.alert_enabled.get() or self.root.state() != "withdrawn":
+            self._cancel_alert_poll()
+            self._alert_pending.clear()
+            return
+
+        thresholds = {
+            "cpu_hot":     self.cpu_hot.get(),
+            "ram_hot":     self.ram_hot.get(),
+            "disk_hot":    self.disk_hot.get(),
+            "battery_low": self.battery_low.get(),
+        }
+
+        any_pending = False
+        for key, thresh_key, cmp, label, msg_fmt in ALERTS:
+            if key not in active:
+                continue
+            value  = raw.get(key)
+            thresh = thresholds[thresh_key]
+            if value is None:
+                continue
+
+            triggered = value >= thresh if cmp == "ge" else value <= thresh
+            if not triggered:
+                self._alert_pending.pop(key, None)
+                self._alert_active.discard(key)
+                continue
+
+            if key in self._alert_active:
+                continue
+
+            first_seen = self._alert_pending.setdefault(key, time.time())
+            if time.time() - first_seen >= ALERT_HOLD_SECONDS:
+                self._alert_active.add(key)
+                self._alert_pending.pop(key, None)
+                self.notify(label, msg_fmt.format(value=value, thresh=thresh))
+            else:
+                any_pending = True
+
+        if any_pending:
+            self._ensure_alert_poll()
+        else:
+            self._cancel_alert_poll()
+
+    def _ensure_alert_poll(self):
+        if self.alert_job is None:
+            self.alert_job = self.root.after(ALERT_POLL_SECONDS * 1000, self._poll_alerts)
+
+    def _cancel_alert_poll(self):
+        if self.alert_job is not None:
+            self.root.after_cancel(self.alert_job)
+            self.alert_job = None
+
+    def _poll_alerts(self):
+        self.alert_job = None
+        active = {key for key, var in self.show_vars.items() if var.get()}
+        self.check_alerts(project_data(), active)
+
+    def notify(self, title, message):
+        try:
+            Notification(
+                app_id="주인님 확인해주세요",
+                title=title,
+                msg=message,
+            ).show()
+        except Exception:
+            pass
 
     def open_settings(self):
         if self.settings_win is not None and self.settings_win.winfo_exists():
