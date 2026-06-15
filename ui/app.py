@@ -1,8 +1,19 @@
 import os
+import sys
+import json
 import time
+import subprocess
 import tkinter as tk
-import keyboard
-from winotify import Notification
+
+try:
+    import keyboard
+except Exception:
+    keyboard = None
+
+if sys.platform == "win32":
+    from winotify import Notification
+else:
+    Notification = None
 
 from core.monitor import project_data, get_top_processes
 from core.character import get_dialogue
@@ -22,10 +33,11 @@ ALERT_HOLD_SECONDS = 5
 ALERT_POLL_SECONDS = 1
 
 ALERTS = [
-    ("cpu",     "cpu_hot",     "ge", "CPU 사용률",   "CPU 사용률이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
-    ("memory",  "ram_hot",     "ge", "메모리 사용량", "메모리 사용량이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
-    ("disk",    "disk_hot",    "ge", "저장 공간",    "디스크 사용량이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
-    ("battery", "battery_low", "le", "배터리",      "배터리가 {value:.0f}%로 기준({thresh}%) 이하예요."),
+    # (show_vars 키, raw 데이터 키, 임계값 키, 비교 방식, 알림 제목, 알림 메시지)
+    ("cpu",     "cpu",     "cpu_hot",     "ge", "CPU 사용률",   "CPU 사용률이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
+    ("ram",     "memory",  "ram_hot",     "ge", "메모리 사용량", "메모리 사용량이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
+    ("disk",    "disk",    "disk_hot",    "ge", "저장 공간",    "디스크 사용량이 {value:.0f}%로 기준({thresh}%)을 넘었어요."),
+    ("battery", "battery", "battery_low", "le", "배터리",      "배터리가 {value:.0f}%로 기준({thresh}%) 이하예요."),
 ]
 
 BASE_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -171,7 +183,8 @@ class StatusApp:
             self.data["battery"] = (bat_pct, bat_label)
 
         self.check_alerts(raw, active)
-        self.draw()
+        if self.root.state() != "withdrawn":
+            self.draw()
 
     def check_alerts(self, raw, active):
         if not self.alert_enabled.get() or self.root.state() != "withdrawn":
@@ -187,10 +200,11 @@ class StatusApp:
         }
 
         any_pending = False
-        for key, thresh_key, cmp, label, msg_fmt in ALERTS:
-            if key not in active:
+        for show_key, raw_key, thresh_key, cmp, label, msg_fmt in ALERTS:
+            if show_key not in active:
                 continue
-            value  = raw.get(key)
+            key    = raw_key
+            value  = raw.get(raw_key)
             thresh = thresholds[thresh_key]
             if value is None:
                 continue
@@ -233,11 +247,15 @@ class StatusApp:
 
     def notify(self, title, message):
         try:
-            Notification(
-                app_id="주인님 확인해주세요",
-                title=title,
-                msg=message,
-            ).show()
+            if sys.platform == "win32":
+                Notification(
+                    app_id="주인님 확인해주세요",
+                    title=title,
+                    msg=message,
+                ).show()
+            elif sys.platform == "darwin":
+                script = f"display notification {json.dumps(message)} with title {json.dumps(title)}"
+                subprocess.run(["osascript", "-e", script], check=False)
         except Exception:
             pass
 
@@ -284,6 +302,9 @@ class StatusApp:
             self.schedule_process_check()
 
     def register_hotkey(self):
+        if keyboard is None:
+            return
+
         if self.hotkey_handle is not None:
             keyboard.remove_hotkey(self.hotkey_handle)
             self.hotkey_handle = None
@@ -305,6 +326,7 @@ class StatusApp:
             if has_settings:
                 self.settings_win.deiconify()
                 self.settings_win.lift()
+            self.refresh()
         else:
             if has_settings:
                 self.settings_win.withdraw()
