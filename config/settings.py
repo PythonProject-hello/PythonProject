@@ -42,9 +42,9 @@ DEFAULT_ALERT_ENABLED = True
 
 # 프리셋
 PRESETS = {
-    "느슨": {"cpu_hot": 90, "ram_hot": 90, "battery_low": 15, "disk_hot": 80},
-    "보통":       {"cpu_hot": 75, "ram_hot": 82, "battery_low": 25, "disk_hot": 40},
-    "엄격":       {"cpu_hot": 55, "ram_hot": 65, "battery_low": 40, "disk_hot": 20},
+    "안 표독": {"cpu_hot": 90, "ram_hot": 90, "battery_low": 15, "disk_hot": 80},
+    "덜 표독":       {"cpu_hot": 75, "ram_hot": 82, "battery_low": 25, "disk_hot": 40},
+    "표독":       {"cpu_hot": 55, "ram_hot": 65, "battery_low": 40, "disk_hot": 20},
 }
 
 _SAVE_PATH = os.path.join(os.getenv("APPDATA", "."), "Pyject", "settings.json")
