@@ -5,9 +5,12 @@ import time
 import subprocess
 import tkinter as tk
 
-try:
-    import keyboard
-except Exception:
+if sys.platform == "win32":
+    try:
+        import keyboard
+    except Exception:
+        keyboard = None
+else:
     keyboard = None
 
 if sys.platform == "win32":
@@ -447,7 +450,7 @@ class StatusApp:
 
     def draw_header(self):
         self.canvas.create_text(76, 58, text="주인님, 확인해주세요!", anchor="nw", fill=TEXT, font=("Apple SD Gothic Neo", 28, "bold"))
-        self.canvas.create_text(78, 100, text="CPU와 메모리 상태를 하치와레 멘트로 보여주는 미니 대시보드", anchor="nw", fill=MUTED, font=("Apple SD Gothic Neo", 13, "bold"))
+        self.canvas.create_text(78, 100, text="CPU와 메모리 상태를 엽기토끼 멘트로 보여주는 미니 대시보드", anchor="nw", fill=MUTED, font=("Apple SD Gothic Neo", 13, "bold"))
         self.canvas.create_text(1062, 118, text=f"마지막 갱신 {self.data.get('time', '-')}", anchor="ne", fill="#7f8792", font=("Apple SD Gothic Neo", 12, "bold"))
 
     def visible_metrics(self):
@@ -503,7 +506,7 @@ class StatusApp:
         key, title, message, color, badge = self.mood()
         x, y, w, h = 646, 176, 518, 560
         rounded_rect(self.canvas, x, y, x + w, y + h, 38, fill="#171a1e", outline=color, width=2)
-        self.canvas.create_text(x + 34, y + 34, text="HACHIWARE STATUS", anchor="nw", fill=color, font=("Apple SD Gothic Neo", 12, "bold"))
+        self.canvas.create_text(x + 34, y + 34, text="YupKi ToKkik", anchor="nw", fill=color, font=("Apple SD Gothic Neo", 12, "bold"))
         self.canvas.create_text(x + 34, y + 68, text=title, anchor="nw", fill=TEXT, font=("Apple SD Gothic Neo", 26, "bold"))
 
         rounded_rect(self.canvas, x + w - 140, y + 34, x + w - 34, y + 66, 17, fill=color, outline="")
