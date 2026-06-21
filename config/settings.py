@@ -17,9 +17,9 @@ MAX_REFRESH_INTERVAL = 10
 # 반응 기준값 기본값
 DEFAULT_THRESHOLDS = {
     "cpu_hot":          75,
-    "ram_hot":          82,
+    "ram_hot":          80,
     "battery_low":      25,
-    "disk_hot":         40,
+    "disk_hot":         85,
     "refresh_interval": DEFAULT_REFRESH_INTERVAL,
 }
 
@@ -32,11 +32,11 @@ DEFAULT_QUIT_HOTKEY_KEY = "q"
 # 임계값 초과 시 토스트 알림 기본 사용 여부
 DEFAULT_ALERT_ENABLED = True
 
-# 프리셋
+# 프리셋 (cpu_hot/ram_hot/disk_hot은 평균 사용량 기준 - 느슨할수록 거의 다 찼을 때만 반응)
 PRESETS = {
-    "안 표독": {"cpu_hot": 90, "ram_hot": 90, "battery_low": 15, "disk_hot": 80},
-    "덜 표독":       {"cpu_hot": 75, "ram_hot": 82, "battery_low": 25, "disk_hot": 40},
-    "표독":       {"cpu_hot": 55, "ram_hot": 65, "battery_low": 40, "disk_hot": 20},
+    "안 표독": {"cpu_hot": 90, "ram_hot": 90, "battery_low": 15, "disk_hot": 90},
+    "덜 표독":       {"cpu_hot": 75, "ram_hot": 80, "battery_low": 25, "disk_hot": 85},
+    "표독":       {"cpu_hot": 55, "ram_hot": 65, "battery_low": 40, "disk_hot": 75},
 }
 
 _SAVE_PATH = os.path.join(os.getenv("APPDATA", "."), "Pyject", "settings.json")
